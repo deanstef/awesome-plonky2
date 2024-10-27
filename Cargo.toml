@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+plonky2 = { version = "0.2.2", default-features = false }
+anyhow = { version = "1.0.40", default-features = false }
+itertools = { version = "0.10.0", default-features = false }
+num = { version = "0.4", default-features = false, features = ["rand"] }
+plonky2_util = { version = "0.2.0", default-features = false }
+plonky2_field = { version = "0.2.2", default-features = false }
+#sha2 = "0.10"
+#log = "0.4.14"
+#env_logger = "0.10.0"
+#rand = "0.8.5"
