@@ -10,25 +10,22 @@ use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
 /// An example of using Plonky2 to prove a statement of the form
 /// "I know f(x) = xˆ3 - 2xˆ2 + 7x + 11", such that if x=z then f(z)=k.
 fn main() -> Result<()> {
-    
     // 1) Plonky2 circuit setup:
     // - D: defines the degree of the field extension
     // - C: Poseidon-Goldilock configuration
     // - F: Field type associated with the PoseidonGoldilocksConfig with extension D
     // - config: predefined recursive circuit configuration
     // - builder: structure to create a plonky2 circuit
-    
     const D: usize = 2; // D=2 provides 100-bits of security
     type C = PoseidonGoldilocksConfig;
     type F = <C as GenericConfig<D>>::F;
     let config = CircuitConfig::standard_recursion_config();
-    let mut builder = CircuitBuilder::<F,D>::new(config);
+    let mut builder = CircuitBuilder::<F, D>::new(config);
 
     // 2) Build the circuit
 
     // A virtual target is a placeholder variable representing an input to the circuit
     let x = builder.add_virtual_target();
-    
     // a = xˆ3
     let a = builder.cube(x);
 
@@ -65,14 +62,17 @@ fn main() -> Result<()> {
     right: `19`: Partition containing Wire(Wire { row: 1, column: 11 }) was set twice with different values: 19 != 17',
     note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
      */
-    
+
     // 4) Build full circuit with prover data
     let data = builder.build::<C>();
 
     // 5) Build proof with partial witness (public inputs)
     let proof = data.prove(w)?;
 
-    println!("I know xˆ3 - 2xˆ2 + 7x + 11 for {}, it's {}", proof.public_inputs[0],proof.public_inputs[1]);
+    println!(
+        "I know xˆ3 - 2xˆ2 + 7x + 11 for {}, it's {}",
+        proof.public_inputs[0], proof.public_inputs[1]
+    );
 
-    data.verify(proof)  
+    data.verify(proof)
 }
