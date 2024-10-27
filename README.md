@@ -4,9 +4,17 @@ This repo contains resources and practical examples to learn and explore the [pl
 
 ## Examples
 
-This repository contains a collection of plonky2 examples that help to get started and build more circuits.
+The `examples` directory contains a collection of plonky2 circuits that help to get started and build more circuits.
 
 > note: the `rust-toolchain` has been added to the project because plonky2 currently works under the nightly toolchain.
+
+To run an example use the command
+
+    cargo run --release --example <example-name.rs>
+
+### Proving polynomial
+
+The example `prove_poly.rs` shows how to prove the knowledge of a polynomial with plonky2.
 
 ### Run an example
 
