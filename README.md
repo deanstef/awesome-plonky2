@@ -10,15 +10,11 @@ The `examples` directory contains a collection of plonky2 circuits that help to 
 
 To run an example use the command
 
-    cargo run --release --example <example-name.rs>
+    RUSTFLAGS=-Ctarget-cpu=native cargo run --release --example <example-name> - --vv
 
 ### Proving polynomial
 
-The example `prove_poly.rs` shows how to prove the knowledge of a polynomial with plonky2.
-
-### Run an example
-
-todo
+The example `prove_poly.rs` shows how to prove the knowledge of a polynomial with plonky2. This example is based on [this]((https://polymerlabs.medium.com/a-tutorial-on-writing-zk-proofs-with-plonky2-part-i-be5812f6b798)) tutorial from Polymer Labs, and it is heavily inspired by [this](https://github.com/hashcloak/plonky2-merkle-trees/blob/master/examples/pol.rs) example from HashCloak.
 
 ## Resources
 
