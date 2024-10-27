@@ -18,7 +18,7 @@ The example `prove_poly.rs` shows how to prove the knowledge of a polynomial wit
 
 ## Resources
 
-An inconplete list of resources denscribing plonky2
+An incomplete list of plonky2 resources
 
 - Plonky2 [whitepaper](https://github.com/0xPolygonZero/plonky2/blob/main/plonky2/plonky2.pdf)
 - How to write plonky2 proofs [tutorial](https://polymerlabs.medium.com/a-tutorial-on-writing-zk-proofs-with-plonky2-part-i-be5812f6b798) from Polymer Labs
