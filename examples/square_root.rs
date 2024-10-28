@@ -26,10 +26,11 @@ use plonky2_field::extension::Extendable;
 /// It reduces computational load inside the circuit doing calculation outside and passing result as
 /// additional public input.
 #[derive(Debug, Default)]
-struct SquareRootGenerator<F: RichField + Extendable<D>, const D: usize> {  // sqrt generator defined over field F and field extension D
-    x: Target,                  // Expected target in the circuit
-    x_squared: Target,          // Target of x squared, we work on this to compute x
-    _phantom: PhantomData<F>,   // Dependance on F
+struct SquareRootGenerator<F: RichField + Extendable<D>, const D: usize> {
+    // sqrt generator defined over field F and field extension D
+    x: Target,                // Expected target in the circuit
+    x_squared: Target,        // Target of x squared, we work on this to compute x
+    _phantom: PhantomData<F>, // Dependance on F
 }
 
 // Implement the SquareRootGenerator using plonky2 SimpleGenerator trait.
@@ -47,11 +48,7 @@ impl<F: RichField + Extendable<D>, const D: usize> SimpleGenerator<F, D>
     }
 
     // run the computation to calculate the sqrt
-    fn run_once(
-        &self,
-        witness: &PartitionWitness<F>,
-        out_buffer: &mut GeneratedValues<F>,
-    ) {
+    fn run_once(&self, witness: &PartitionWitness<F>, out_buffer: &mut GeneratedValues<F>) {
         let x_squared = witness.get_target(self.x_squared);
         let x = x_squared.sqrt().unwrap();
 
@@ -71,7 +68,7 @@ impl<F: RichField + Extendable<D>, const D: usize> SimpleGenerator<F, D>
     fn deserialize(src: &mut Buffer, _common_data: &CommonCircuitData<F, D>) -> IoResult<Self> {
         let x = src.read_target()?;
         let x_squared = src.read_target()?;
-        
+
         // Create a new instance of the generator with the same internal state
         Ok(Self {
             x,
