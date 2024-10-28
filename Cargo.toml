@@ -11,6 +11,6 @@ num = { version = "0.4", default-features = false, features = ["rand"] }
 plonky2_util = { version = "0.2.0", default-features = false }
 plonky2_field = { version = "0.2.2", default-features = false }
 #sha2 = "0.10"
-#log = "0.4.14"
+log = "0.4.14"
 #env_logger = "0.10.0"
 #rand = "0.8.5"
