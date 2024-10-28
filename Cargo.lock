@@ -33,6 +33,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "itertools 0.10.5",
+ "log",
  "num",
  "plonky2",
  "plonky2_field",

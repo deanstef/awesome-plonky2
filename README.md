@@ -8,13 +8,19 @@ The `examples` directory contains a collection of plonky2 circuits that help to 
 
 > note: the `rust-toolchain` has been added to the project because plonky2 currently works under the nightly toolchain.
 
-To run an example use the command
+### Run an example
+
+To run examples use the command:
 
     RUSTFLAGS=-Ctarget-cpu=native cargo run --release --example <example-name> - --vv
 
-### Proving polynomial
+### 1. Proving polynomial
 
 The example `prove_poly.rs` shows how to prove the knowledge of a polynomial with plonky2. This example is based on [this]((https://polymerlabs.medium.com/a-tutorial-on-writing-zk-proofs-with-plonky2-part-i-be5812f6b798)) tutorial from Polymer Labs, and it is heavily inspired by [this](https://github.com/hashcloak/plonky2-merkle-trees/blob/master/examples/pol.rs) example from HashCloak.
+
+### 2. Square root
+
+The example `square_root.rs` proves the square root of a randomly selected field element.
 
 ## Resources
 
