@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use anyhow::Result;
 use plonky2::hash::hash_types::HashOutTarget;
 use plonky2::hash::poseidon::PoseidonHash;
@@ -64,27 +66,6 @@ impl Account {
             );
         }
 
-        // // 2. Threshold must be a power of 2
-
-        // // Public input must be the expected threshold
-        // let threshold_val_target = builder.constant(F::from_canonical_u32(threshold_val));
-        // builder.is_equal(threshold, threshold_val_target);
-
-        // // a = (threshold - 1)
-        // let a = builder.add_const(threshold, F::NEG_ONE);
-
-        // // b = a AND b
-        // let bit_threshold = builder.split_le(threshold, threshold_bits.try_into().unwrap());
-        // let bit_a = builder.split_le(a, threshold_bits.try_into().unwrap()); // warn: if threshold - 1 has less bits than threshold this fails!
-        // let mut and_target: Vec<BoolTarget> = (0..threshold_bits).map(|_| builder.add_virtual_bool_target_safe()).collect();
-
-        // // If threshold is power of 2 the AND with (threshold - 1) will be all zeros.
-        // // Note: The binary representation of a number power of 2 have only one bit set.
-        // for i in 0..bit_a.len() {
-        //     and_target.push(builder.and(bit_threshold[i], bit_a[i]));
-        //     builder.assert_zero(and_target[i].target);
-        // }
-
         // 3. The balance must be lower than threshold = 2^7 = 128
         builder.range_check(balance, threshold.try_into().unwrap());
 
@@ -107,10 +88,6 @@ impl Account {
     }
 }
 
-pub fn num_bits_u32(n: u32) -> u32 {
-    32 - n.leading_zeros()
-}
-
 fn main() -> Result<()> {
     // Example account details
     let account_id = 1;
@@ -129,16 +106,24 @@ fn main() -> Result<()> {
     let targets = account.prove_balance_threshold(&mut builder, threshold);
     account.fill_targets(&mut pw, actual_balance, targets);
 
+    let now = Instant::now();
     let data = builder.build::<C>();
+    let time_build = now.elapsed();
+
+    let now = Instant::now();
     let proof = data.prove(pw)?;
+    let time_prove = now.elapsed();
 
     println!(
-        "The balance {:?} of account {} is greater than {}",
+        "The balance {:?} of account {} is greater than 2^{}",
         proof.public_inputs, account.id, threshold
     );
 
-    data.verify(proof)
+    let now = Instant::now();
+    let _ = data.verify(proof);
+    let time_verify = now.elapsed();
 
-    // Generate the proof, verify, and test the setup
-    // (this part depends on additional setup for proving/verifying which is often separate)
+    println!("time_build={time_build:?} time_prove={time_prove:?} time_verify={time_verify:?}");
+
+    Ok(())
 }
