@@ -26,6 +26,10 @@ The example `square_root.rs` proves the square root of a randomly selected field
 
 The example `check_balance.rs` simulates an `Account` with an `id` and an encrypted `balance` and shows how to prove that the balance is below a certain threshold.
 
+### 4. Power of two
+
+The example `power_two.rs` shows how to prove that a given number is power of two.
+
 ## Resources
 
 An incomplete list of plonky2 resources
