@@ -22,6 +22,10 @@ The example `prove_poly.rs` shows how to prove the knowledge of a polynomial wit
 
 The example `square_root.rs` proves the square root of a randomly selected field element.
 
+### 3. Check balance
+
+The example `check_balance.rs` simulates an `Account` with an `id` and an encrypted `balance` and shows how to prove that the balance is below a certain threshold.
+
 ## Resources
 
 An incomplete list of plonky2 resources
