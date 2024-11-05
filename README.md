@@ -30,7 +30,7 @@ The example `check_balance.rs` simulates an `Account` with an `id` and an encryp
 
 The example `power_two.rs` shows how to prove that a given number is power of two.
 
-### 5. Power of two
+### 5. Merkle Trees
 
 The example `merkle_tree.rs` shows how to prove that an element (leaf) is part of a merkle tree. In the example the circuit takes a `leaf` and `root` values as public inputs.
 
