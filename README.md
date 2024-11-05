@@ -32,7 +32,7 @@ The example `power_two.rs` shows how to prove that a given number is power of tw
 
 ### 5. Power of two
 
-The example `merkle_tree.rs` shows how to prove that a given value (leaf) is part of a merkle tree. In the example the circuit takes a `leaf` and `root` values as public inputs.
+The example `merkle_tree.rs` shows how to prove that an element (leaf) is part of a merkle tree. In the example the circuit takes a `leaf` and `root` values as public inputs.
 
 ## Resources
 
