@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use anyhow::Result;
 use plonky2::iop::witness::{PartialWitness, WitnessWrite};
 use plonky2::plonk::{

@@ -1,4 +1,4 @@
-use std::time::Instant;
+#![allow(clippy::upper_case_acronyms)]
 
 use anyhow::Result;
 use plonky2::hash::hash_types::HashOutTarget;
@@ -10,6 +10,7 @@ use plonky2::plonk::circuit_data::CircuitConfig;
 use plonky2::plonk::config::{Hasher, PoseidonGoldilocksConfig};
 use plonky2_field::goldilocks_field::GoldilocksField;
 use plonky2_field::types::Field;
+use std::time::Instant;
 
 pub type F = GoldilocksField;
 pub type Digest = [F; 4]; // Digest is 4 field elements
@@ -98,7 +99,7 @@ fn main() -> Result<()> {
     let account = Account::new(account_id, actual_balance);
 
     // Initialize the circuit builder
-    let config = CircuitConfig::standard_recursion_config();
+    let config = CircuitConfig::standard_recursion_zk_config();
     let mut builder = CircuitBuilder::<F, D>::new(config);
     let mut pw = PartialWitness::<F>::new();
 
