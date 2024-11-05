@@ -5,7 +5,6 @@ use plonky2::field::types::Field;
 use plonky2::hash::hash_types::RichField;
 use plonky2::hash::merkle_proofs::MerkleProofTarget;
 use plonky2::hash::merkle_tree::MerkleTree;
-use plonky2::hash::poseidon::PoseidonHash;
 use plonky2::iop::witness::{PartialWitness, WitnessWrite};
 use plonky2::plonk::circuit_builder::CircuitBuilder;
 use plonky2::plonk::circuit_data::CircuitConfig;
@@ -17,31 +16,32 @@ pub type C = PoseidonGoldilocksConfig;
 pub type F = <C as GenericConfig<D>>::F;
 pub type Digest = [F; 4]; // Digest is 4 field elements
 
-pub struct Tree(pub MerkleTree<F, PoseidonHash>);
-
 // Generate a 2D vector of n elements each of length
 fn random_data<F: RichField>(n: usize, k: usize) -> Vec<Vec<F>> {
     (0..n).map(|_| F::rand_vec(k)).collect()
 }
 
 fn main() -> Result<()> {
-    // log_n = 8 -> 2^20=1.048.576 leaves
+    // log_n = 20 -> 2^20=1.048.576 leaves
     let log_n = 20;
     let n = 1 << log_n;
     let cap_height = 0; // merkle root
 
+    // Number of field elements per leaf
     let leaf_size = 4;
 
     let leaves = random_data::<F>(n, leaf_size);
     let tree = MerkleTree::<F, <C as GenericConfig<D>>::Hasher>::new(leaves, cap_height);
 
-    println!("{:?}", tree.cap);
+    println!("Merkle Root (cap = 0): {:?}", tree.cap);
 
     // Prove that the 12-th leaf is in the tree
     let i = 12;
     let proof = tree.prove(i);
 
     println!("Proving leaf {:?}", tree.leaves[i]);
+
+    // Merkle Tree Circuit
 
     let config = CircuitConfig::standard_recursion_zk_config();
     let mut builder = CircuitBuilder::<F, D>::new(config);
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
         pw.set_target(data[j], tree.leaves[i][j]);
     }
 
-    builder.verify_merkle_proof::<PoseidonHash>(data.to_vec(), &i_bits, merkle_root, &proof_t);
+    builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(data.to_vec(), &i_bits, merkle_root, &proof_t);
 
     // 4) Build full circuit with prover data
     let now = Instant::now();
