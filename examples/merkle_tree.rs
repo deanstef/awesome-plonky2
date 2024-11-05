@@ -67,7 +67,12 @@ fn main() -> Result<()> {
         pw.set_target(data[j], tree.leaves[i][j]);
     }
 
-    builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(data.to_vec(), &i_bits, merkle_root, &proof_t);
+    builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(
+        data.to_vec(),
+        &i_bits,
+        merkle_root,
+        &proof_t,
+    );
 
     // 4) Build full circuit with prover data
     let now = Instant::now();
