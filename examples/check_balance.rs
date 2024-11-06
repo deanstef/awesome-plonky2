@@ -99,7 +99,7 @@ fn main() -> Result<()> {
     let account = Account::new(account_id, actual_balance);
 
     // Initialize the circuit builder
-    let config = CircuitConfig::standard_recursion_zk_config();
+    let config = CircuitConfig::standard_recursion_config();
     let mut builder = CircuitBuilder::<F, D>::new(config);
     let mut pw = PartialWitness::<F>::new();
 
