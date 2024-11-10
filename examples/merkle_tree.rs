@@ -74,6 +74,8 @@ fn main() -> Result<()> {
         &proof_t,
     );
 
+    let gates = builder.num_gates();
+
     // 4) Build full circuit with prover data
     let now = Instant::now();
     let data = builder.build::<C>();
@@ -90,6 +92,11 @@ fn main() -> Result<()> {
     println!(
         "The leaf element {:?} is part of the merkle tree with root {:?}",
         data_pi, root_pi,
+    );
+
+    println!(
+        "Number of gates {:?}",
+        gates,
     );
 
     let now = Instant::now();
