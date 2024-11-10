@@ -94,10 +94,7 @@ fn main() -> Result<()> {
         data_pi, root_pi,
     );
 
-    println!(
-        "Number of gates {:?}",
-        gates,
-    );
+    println!("Number of gates {:?}", gates,);
 
     let now = Instant::now();
     let _ = data.verify(proof);
