@@ -10,6 +10,7 @@ use plonky2::plonk::circuit_builder::CircuitBuilder;
 use plonky2::plonk::circuit_data::CircuitConfig;
 use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
 use std::time::Instant;
+use rand::{seq::SliceRandom, thread_rng};
 
 const D: usize = 2;
 pub type C = PoseidonGoldilocksConfig;
@@ -29,17 +30,35 @@ fn main() -> Result<()> {
 
     // Number of field elements per leaf
     let leaf_size = 4;
-
     let leaves = random_data::<F>(n, leaf_size);
+    let leaves_len = leaves.len();
+
     let tree = MerkleTree::<F, <C as GenericConfig<D>>::Hasher>::new(leaves, cap_height);
 
     println!("Merkle Root (cap = 0): {:?}", tree.cap);
 
-    // Prove that the 12-th leaf is in the tree
-    let i = 12;
-    let proof = tree.prove(i);
+    // // Prove that the 12-th leaf is in the tree
+    // let i = 12;
+    //let proof = tree.prove(i);
 
-    println!("Proving leaf {:?}", tree.leaves[i]);
+    // Generate 10 unique random indices
+    let mut indices: Vec<usize> = (0..leaves_len).collect();
+    let mut rng = thread_rng();
+    indices.shuffle(&mut rng); // Shuffle the indices
+    let random_indices: Vec<usize> = indices.into_iter().take(10).collect();
+
+    // Compute proofs for the selected indices
+    let proofs: Vec<_> = random_indices
+        .iter()
+        .map(|&i| tree.prove(i))
+        .collect();
+
+    // Now `random_indices` contains the selected indices,
+    // and `proofs` contains the corresponding Merkle proofs.
+    println!("Random indices: {:?}", random_indices);
+    println!("Corresponding proofs: {:?}", proofs);
+
+    // println!("Proving leaf {:?}", tree.leaves[i]);
 
     // Merkle Tree Circuit
 
@@ -50,29 +69,59 @@ fn main() -> Result<()> {
     let merkle_root = builder.add_virtual_hash();
     builder.register_public_inputs(&merkle_root.elements);
     pw.set_hash_target(merkle_root, tree.cap.0[0]);
+    
+    // let proof_t = MerkleProofTarget {
+    //     siblings: builder.add_virtual_hashes(proof.siblings.len()),
+    // };
+    // for i in 0..proof.siblings.len() {
+    //     pw.set_hash_target(proof_t.siblings[i], proof.siblings[i]);
+    // }
 
-    let proof_t = MerkleProofTarget {
-        siblings: builder.add_virtual_hashes(proof.siblings.len()),
-    };
-    for i in 0..proof.siblings.len() {
-        pw.set_hash_target(proof_t.siblings[i], proof.siblings[i]);
-    }
+    // let i_c = builder.constant(F::from_canonical_usize(i));
+    // let i_bits = builder.split_le(i_c, log_n);
 
-    let i_c = builder.constant(F::from_canonical_usize(i));
-    let i_bits = builder.split_le(i_c, log_n);
+    // let data = builder.add_virtual_targets(tree.leaves[i].len());
+    // builder.register_public_inputs(&data);
+    // for (j, _item) in data.iter().enumerate() {
+    //     pw.set_target(data[j], tree.leaves[i][j]);
+    // }
 
-    let data = builder.add_virtual_targets(tree.leaves[i].len());
-    builder.register_public_inputs(&data);
-    for (j, _item) in data.iter().enumerate() {
-        pw.set_target(data[j], tree.leaves[i][j]);
-    }
+    // builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(
+    //     data.to_vec(),
+    //     &i_bits,
+    //     merkle_root,
+    //     &proof_t,
+    // );
 
-    builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(
+    for (index, proof) in random_indices.iter().zip(proofs.iter()) {
+        let i_c = builder.constant(F::from_canonical_usize(*index)); // Convert index to constant
+        let i_bits = builder.split_le(i_c, log_n); // Split the index into bits
+    
+        // Add virtual targets for the leaves of the Merkle tree at the given index
+        let data = builder.add_virtual_targets(tree.leaves[*index].len());
+        builder.register_public_inputs(&data);
+        for (j, _item) in data.iter().enumerate() {
+            pw.set_target(data[j], tree.leaves[*index][j]);
+        }
+    
+        // Create the proof target for each proof
+        let proof_t = MerkleProofTarget {
+            siblings: builder.add_virtual_hashes(proof.siblings.len()),
+        };
+    
+        // Set hash targets for the siblings of the current proof
+        for i in 0..proof.siblings.len() {
+            pw.set_hash_target(proof_t.siblings[i], proof.siblings[i]);
+        }
+    
+        // Verify the Merkle proof for the current index and proof
+        builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(
         data.to_vec(),
         &i_bits,
         merkle_root,
         &proof_t,
-    );
+        );
+    }
 
     let gates = builder.num_gates();
 
