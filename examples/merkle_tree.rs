@@ -37,7 +37,7 @@ fn main() -> Result<()> {
 
     println!("Merkle Root (cap = 0): {:?}", tree.cap);
 
-    // Generate N unique random indices
+    // Generate N unique random indices (N = 1)
     let mut indices: Vec<usize> = (0..leaves_len).collect();
     let mut rng = thread_rng();
     indices.shuffle(&mut rng); // Shuffle the indices
