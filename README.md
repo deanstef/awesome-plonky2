@@ -32,7 +32,22 @@ The example `power_two.rs` shows how to prove that a given number is power of tw
 
 ### 5. Merkle Trees
 
-The example `merkle_tree.rs` shows how to prove that an element (leaf) is part of a merkle tree. In the example the circuit takes a `root` and an array of `leaves` values as public inputs.
+The example `merkle_tree.rs` shows how to prove that an element (leaf) is part of a merkle tree. In the example the circuit takes a `root` and an array of randomly selected `leaves` values as public inputs.
+
+The number of leaves to be proven must be passed as a command line argument. Use the command:
+
+```bash
+RUSTFLAGS=-Ctarget-cpu=native cargo run --release --example merkle_tree -- <number-of-leaves>
+```
+
+### 6. Merkle Tree with Average
+The example `merkle_tree_average.rs` shows how to prove that an array of elements (leaves) is part of a merkle tree. The leaves are represented by a vector of field elements of which the first element is a random number. The circuit also proves that the average of the first element of each leaf is computed correctly.
+
+The number of leaves to be proven must be passed as a command line argument. Use the command:
+
+```bash
+RUSTFLAGS=-Ctarget-cpu=native cargo run --release --example merkle_tree_average -- <number-of-leaves>
+```
 
 ## Resources
 
