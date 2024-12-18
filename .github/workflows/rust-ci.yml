@@ -45,7 +45,7 @@ jobs:
           for example in $(ls examples/*.rs | xargs -n 1 basename | sed 's/\.rs$//'); do
             echo "Running example: $example"
             if [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ]; then
-              cargo run --release --example "$example" -- 1 -vv
+              cargo run --release --example "$example" -- 1
             else
               cargo run --release --example "$example" -- -vv
             fi
