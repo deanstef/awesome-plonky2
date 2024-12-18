@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+matplotlib = "*"
+numpy = "*"
+pandas = "*"
+seaborn = "*"  # For better plotting styles
+
+[dev-packages]
+black = "*"     # For code formatting
+pylint = "*"    # For code linting
+
+[requires]
+python_version = "3.9"
