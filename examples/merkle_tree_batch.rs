@@ -29,7 +29,6 @@ const BATCH_SIZE: usize = 16;
 /// This example demonstrates how to generate and verify Merkle proofs in batches.
 /// It generates one circuit per batch. Each circuit verifies a batch of Merkle proofs
 fn main() -> Result<()> {
-
     // Read args
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
