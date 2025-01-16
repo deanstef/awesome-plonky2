@@ -1,5 +1,4 @@
 /target
-/examples/merkle_tree_batch.rs
 /examples/merkle_tree_recursive_*
 /recursion
 /benchmarks/results
