@@ -124,7 +124,7 @@ fn main() -> Result<()> {
         let i_c = builder.constant(F::from_canonical_usize(*index));
         let i_bits = builder.split_le(i_c, log_n);
 
-        let leaf_data = builder.add_virtual_targets(LEAF_SIZE);
+        let leaf_data = builder.add_virtual_targets(tree.leaves[*index].len());
         leaf_data
             .iter()
             .zip(tree.leaves[*index].iter())

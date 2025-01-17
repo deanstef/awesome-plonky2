@@ -20,7 +20,6 @@ const LEAF_SIZE: usize = 4;
 const TREE_SIZE: usize = 1 << 20; // Fixed size: 2^20 leaves
 pub type C = PoseidonGoldilocksConfig;
 pub type F = <C as GenericConfig<D>>::F;
-pub type Digest = [F; 4]; // Digest is 4 field elements
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -63,7 +62,7 @@ fn main() -> Result<()> {
     pw.set_hash_target(merkle_root, tree.cap.0[0]);
 
     let mut iterations = 0;
-    let log_n = 20; // log2 of TREE_SIZE
+    let log_n = (TREE_SIZE as f64).log2() as usize;
     for (index, proof) in random_indices.iter().zip(proofs.iter()) {
         iterations += 1;
 
@@ -81,8 +80,8 @@ fn main() -> Result<()> {
             siblings: builder.add_virtual_hashes(proof.siblings.len()),
         };
 
-        for i in 0..proof.siblings.len() {
-            pw.set_hash_target(proof_t.siblings[i], proof.siblings[i]);
+        for (i, sibling) in proof.siblings.iter().enumerate() {
+            pw.set_hash_target(proof_t.siblings[i], *sibling);
         }
 
         builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(
