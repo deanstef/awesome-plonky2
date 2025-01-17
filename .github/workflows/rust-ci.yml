@@ -45,8 +45,15 @@ jobs:
           for file in $(find examples -name "*.rs"); do
             # Extract just the example name without .rs and path
             example=$(basename "$file" .rs)
-            echo "Running example: $example"
-            if [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ] || [ "$example" = "merkle_tree_batch" ] || [ "$example" = "merkle_tree_recursive_verify" ]; then
+            # Get the directory path
+            dir=$(dirname "$file")
+            
+            echo "Running example: $example from $dir"
+            
+            # Run recursion examples with 2 leaves, others with standard args
+            if [[ "$dir" == *"recursion"* ]]; then
+              cargo run --release --example "$example" -- 2
+            elif [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ] || [ "$example" = "merkle_tree_batch" ]; then
               cargo run --release --example "$example" -- 1
             else
               cargo run --release --example "$example" -- -vv

@@ -267,15 +267,16 @@ fn main() -> Result<()> {
 
     println!("\nProof Generation Summary:");
     println!("Recursive circuit total build time: {:?}", total_build_time);
-    println!(
-        "Average recursion build time: {:?}",
-        total_build_time / (random_indices.len() as u32 - 1)
-    );
+    
+    // Only print average if we have more than one proof
+    if num_recursive > 0 {
+        println!(
+            "Average recursion build time: {:?}",
+            total_build_time / (num_recursive as u32)
+        );
+    }
 
-    println!(
-        "Total proof time (base + recursive): {:?}",
-        total_proof_time
-    );
+    println!("Total proof time (base + recursive): {:?}", total_proof_time);
     println!("Proof generation time: {:?}", total_proof_time);
 
     println!(
