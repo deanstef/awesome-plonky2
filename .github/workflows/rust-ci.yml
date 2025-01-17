@@ -41,8 +41,10 @@ jobs:
         env:
           RUSTFLAGS: -Ctarget-cpu=native
         run: |
-          # List all files in the `examples` folder with `.rs` extension and strip the file extension.
-          for example in $(ls examples/*.rs | xargs -n 1 basename | sed 's/\.rs$//'); do
+          # Find all .rs files in examples directory and its subdirectories
+          for file in $(find examples -name "*.rs"); do
+            # Extract just the example name without .rs and path
+            example=$(basename "$file" .rs)
             echo "Running example: $example"
             if [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ] || [ "$example" = "merkle_tree_batch" ] || [ "$example" = "merkle_tree_recursive_verify" ]; then
               cargo run --release --example "$example" -- 1
