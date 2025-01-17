@@ -41,20 +41,13 @@ jobs:
         env:
           RUSTFLAGS: -Ctarget-cpu=native
         run: |
-          # Find all .rs files in examples directory and its subdirectories
-          for file in $(find examples -name "*.rs"); do
-            # Extract just the example name without .rs and path
+          # Find all Rust files in examples and its subdirectories, excluding utils
+          for file in $(find examples -name "*.rs" -not -path "*/utils/*"); do
+            # Extract example name without path and extension
             example=$(basename "$file" .rs)
-            # Get the directory path
-            dir=$(dirname "$file")
-            
-            echo "Running example: $example from $dir"
-            
-            # Run recursion examples with 2 leaves, others with standard args
-            if [[ "$dir" == *"recursion"* ]]; then
+            echo "Running example: $example"
+            if [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ] || [ "$example" = "merkle_tree_batch" ] || [ "$example" = "merkle_tree_recursive_verify" ]; then
               cargo run --release --example "$example" -- 2
-            elif [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ] || [ "$example" = "merkle_tree_batch" ]; then
-              cargo run --release --example "$example" -- 1
             else
               cargo run --release --example "$example" -- -vv
             fi
