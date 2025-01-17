@@ -292,6 +292,7 @@ fn main() -> Result<()> {
         "Memory used for proof generation: {}",
         format_size(get_peak_memory())
     );
+    print!("Something!");
 
     // Verify final proof
     println!("\nVerifying final proof...");
