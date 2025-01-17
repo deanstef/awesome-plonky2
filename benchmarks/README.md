@@ -33,5 +33,5 @@ pipenv install
 
 ```bash
 # Run Merkle tree benchmarks
-pipenv run python scripts/merkle_tree/bench_merkle.py --leaf-counts <array of leaf counts e.g. 10 100 1000> [--example merkle_tree_average] (default: merkle_tree)
+pipenv run python scripts/merkle_tree/bench_merkle.py --leaf-counts <array of leaf counts e.g. [10 100 1000]> [--example merkle_tree_average] (default: merkle_tree)
 ```
