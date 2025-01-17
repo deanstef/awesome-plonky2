@@ -34,37 +34,54 @@ class MerkleTreeBenchmark:
             # Extract timing information using regex
             proof_time = re.search(r'Proof generation time: ([\d\.]+(?:µs|ms|s))', output)
             verify_time = re.search(r'Verification time: ([\d\.]+(?:µs|ms|s))', output)
-            proof_size = re.search(r'Proof size: ([\d\.]+) KB', output)
+            proof_size = re.search(r'Proof size: ([\d\.]+) (B|KB|MB|GB)', output)
             memory_used = re.search(r'Memory used for proof generation: ([\d\.]+) (B|KB|MB|GB)', output)
             
-            # Convert memory to MB
-            memory_mb = None
-            if memory_used:
-                value = float(memory_used.group(1))
-                unit = memory_used.group(2)
-                memory_mb = {
+            # Convert memory and proof size to MB
+            def convert_to_mb(value: float, unit: str) -> float:
+                return {
                     'B': value / (1024 * 1024),
                     'KB': value / 1024,
                     'MB': value,
                     'GB': value * 1024
                 }[unit]
+
+            memory_mb = None
+            if memory_used:
+                value = float(memory_used.group(1))
+                unit = memory_used.group(2)
+                memory_mb = convert_to_mb(value, unit)
+
+            proof_size_mb = None
+            if proof_size:
+                value = float(proof_size.group(1))
+                unit = proof_size.group(2)
+                proof_size_mb = convert_to_mb(value, unit)
             
+            # Convert time to seconds
+            def parse_time(time_match) -> float:
+                if not time_match:
+                    return None
+                time_str = time_match.group(1)
+                value = float(re.search(r'[\d\.]+', time_str).group())
+                if 'µs' in time_str:
+                    return value / 1_000_000
+                elif 'ms' in time_str:
+                    return value / 1_000
+                else:
+                    return value
+
             return {
                 'leaf_count': leaf_count,
-                'proof_time': self.parse_time(proof_time.group(1)) if proof_time else None,
-                'verify_time': self.parse_time(verify_time.group(1)) if verify_time else None,
-                'proof_size_kb': float(proof_size.group(1)) if proof_size else None,
-                'memory_mb': memory_mb
+                'proof_time': parse_time(proof_time),
+                'verify_time': parse_time(verify_time),
+                'proof_size_mb': proof_size_mb,
+                'memory_mb': memory_mb,
+                'example': self.example_name
             }
-        except Exception as e:
-            print(f"Error running benchmark with {leaf_count} leaves:", e)
-            return {
-                'leaf_count': leaf_count,
-                'proof_time': None,
-                'verify_time': None,
-                'proof_size_kb': None,
-                'memory_mb': None
-            }
+        except subprocess.CalledProcessError as e:
+            print(f"Error running benchmark: {e}")
+            return None
 
     def parse_time(self, time_str: str) -> float:
         """Parse time string to seconds."""
@@ -131,7 +148,7 @@ class MerkleTreeBenchmark:
 def main():
     parser = argparse.ArgumentParser(description='Run Merkle tree benchmarks')
     parser.add_argument('--leaf-counts', type=int, nargs='+', help='Leaf counts to benchmark')
-    parser.add_argument('--example', type=str, choices=['merkle_tree', 'merkle_tree_average'], 
+    parser.add_argument('--example', type=str, choices=['merkle_tree', 'merkle_tree_average', 'merkle_tree_recursive_verify'], 
                         default='merkle_tree', help='Which example to benchmark')
     args = parser.parse_args()
 
