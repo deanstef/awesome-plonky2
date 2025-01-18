@@ -1,13 +1,16 @@
 use anyhow::Result;
-use plonky2::field::types::{Field, Sample};
+use plonky2::field::types::Field;
 use plonky2::hash::merkle_tree::MerkleTree;
+use plonky2::hash::merkle_proofs::MerkleProofTarget;
 use plonky2::iop::witness::{PartialWitness, WitnessWrite};
 use plonky2::plonk::circuit_builder::CircuitBuilder;
-use plonky2::plonk::circuit_data::{CircuitConfig, VerifierCircuitTarget};
+use plonky2::plonk::circuit_data::{CircuitConfig, CircuitData};
 use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
 use plonky2::plonk::proof::ProofWithPublicInputs;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use std::env;
+use std::sync::Mutex;
 use std::time::Instant;
 
 // Import utils from parent directory
@@ -19,25 +22,51 @@ use utils::metrics::{format_size, measure_memory_usage};
 const D: usize = 2;
 const LEAF_SIZE: usize = 4;
 const TREE_SIZE: usize = 1 << 20; // Fixed size: 2^20 leaves
-const PROOFS_PER_BATCH: usize = 10; // Number of proofs to verify in each recursive step
+const PROOFS_PER_BATCH: usize = 100; // Number of proofs to verify in each recursive step
 type C = PoseidonGoldilocksConfig;
 type F = <C as GenericConfig<D>>::F;
+
+// Store memory usage for all proof generations
+static MEMORY_USAGE: Mutex<Vec<u64>> = Mutex::new(Vec::new());
+
+fn record_memory_usage(memory: u64) {
+    if let Ok(mut usage) = MEMORY_USAGE.lock() {
+        usage.push(memory);
+    }
+}
+
+fn get_peak_memory() -> u64 {
+    MEMORY_USAGE
+        .lock()
+        .map(|usage| usage.iter().max().copied().unwrap_or(0))
+        .unwrap_or(0)
+}
+
+fn get_circuit_config() -> CircuitConfig {
+    let mut config = CircuitConfig::standard_recursion_config();
+    config.num_wires = 135;
+    config.num_routed_wires = 80;
+    config.security_bits = 100;
+    config.zero_knowledge = false;
+    config
+}
 
 fn build_base_circuit(
     tree: &MerkleTree<F, <C as GenericConfig<D>>::Hasher>,
     indices: &[usize],
     proofs: &[plonky2::hash::merkle_proofs::MerkleProof<F, <C as GenericConfig<D>>::Hasher>],
     log_n: usize,
-) -> Result<(
-    plonky2::plonk::circuit_data::CircuitData<F, C, D>,
-    ProofWithPublicInputs<F, C, D>,
-)> {
+) -> Result<(CircuitData<F, C, D>, ProofWithPublicInputs<F, C, D>,)> {
     println!("Building base circuit for {} proofs...", indices.len());
-    let now = Instant::now();
 
-    let config = CircuitConfig::standard_recursion_config();
+    let config = get_circuit_config();
     let mut builder = CircuitBuilder::<F, D>::new(config);
     let mut pw = PartialWitness::new();
+
+    // Add Merkle root as public input
+    let merkle_root = builder.add_virtual_hash();
+    builder.register_public_inputs(&merkle_root.elements);
+    pw.set_hash_target(merkle_root, tree.cap.0[0]);
 
     // Process each proof in the batch
     for (&index, proof) in indices.iter().zip(proofs.iter()) {
@@ -45,27 +74,25 @@ fn build_base_circuit(
         let i_c = builder.constant(F::from_canonical_usize(index));
         let i_bits = builder.split_le(i_c, log_n);
 
-        let data = builder.add_virtual_targets(LEAF_SIZE);
-        for (i, &value) in tree.leaves[index].iter().enumerate() {
-            pw.set_target(data[i], value);
-        }
-
-        // Add Merkle root as public input
-        let merkle_root = builder.add_virtual_hash();
-        builder.register_public_inputs(&merkle_root.elements);
-        pw.set_hash_target(merkle_root, tree.cap.0[0]);
+        let leaf_data = builder.add_virtual_targets(tree.leaves[index].len());
+        builder.register_public_inputs(&leaf_data);
+        leaf_data
+            .iter()
+            .zip(tree.leaves[index].iter())
+            .for_each(|(&target, &value)| pw.set_target(target, value));
 
         // Add proof siblings
-        let proof_t = plonky2::hash::merkle_proofs::MerkleProofTarget {
+        let proof_t = MerkleProofTarget {
             siblings: builder.add_virtual_hashes(proof.siblings.len()),
         };
+
         for (i, sibling) in proof.siblings.iter().enumerate() {
             pw.set_hash_target(proof_t.siblings[i], *sibling);
         }
 
         // Verify Merkle proof
         builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(
-            data.to_vec(),
+            leaf_data.to_vec(),
             &i_bits,
             merkle_root,
             &proof_t,
@@ -73,13 +100,28 @@ fn build_base_circuit(
     }
 
     let num_gates = builder.num_gates();
+    println!("Base circuit number of gates: {}", num_gates);
+
+    let now = Instant::now();
     let data = builder.build::<C>();
-    let proof = data.prove(pw)?;
-
     println!("Base circuit build time: {:?}", now.elapsed());
-    println!("Base circuit gates: {}", num_gates);
 
-    Ok((data, proof))
+    println!("Generating base proof...");
+    let now = Instant::now();
+    let (proof_result, memory_used) = measure_memory_usage(|| data.prove(pw));
+    record_memory_usage(memory_used);
+    let snark_proof = proof_result?;
+    println!("Base proof generation time: {:?}", now.elapsed());
+    println!(
+        "Memory used for base proof generation: {}",
+        format_size(memory_used)
+    );
+    println!(
+        "Base proof size: {}",
+        format_size(snark_proof.to_bytes().len() as u64)
+    );
+
+    Ok((data, snark_proof))
 }
 
 fn build_recursive_circuit(
@@ -89,55 +131,47 @@ fn build_recursive_circuit(
     indices: &[usize],
     proofs: &[plonky2::hash::merkle_proofs::MerkleProof<F, <C as GenericConfig<D>>::Hasher>],
     log_n: usize,
-) -> Result<(
-    plonky2::plonk::circuit_data::CircuitData<F, C, D>,
-    ProofWithPublicInputs<F, C, D>,
-)> {
-    let config = CircuitConfig::standard_recursion_config();
+) -> Result<(CircuitData<F, C, D>, ProofWithPublicInputs<F, C, D>)> {
+
+    let config = get_circuit_config();
     let mut builder = CircuitBuilder::<F, D>::new(config);
     let mut pw = PartialWitness::new();
 
     // First, verify the previous proof recursively
-    let vd_target = VerifierCircuitTarget {
-        constants_sigmas_cap: builder
-            .add_virtual_cap(prev_data.common.config.fri_config.cap_height),
-        circuit_digest: builder.add_virtual_hash(),
-    };
-    pw.set_cap_target(
-        &vd_target.constants_sigmas_cap,
-        &prev_data.verifier_only.constants_sigmas_cap,
-    );
-    pw.set_hash_target(
-        vd_target.circuit_digest,
-        prev_data.verifier_only.circuit_digest,
-    );
-
+    let fri_cap_height = prev_data.common.config.fri_config.cap_height;
+    let prev_verifier_data = builder.add_virtual_verifier_data(fri_cap_height);
     let prev_proof_t = builder.add_virtual_proof_with_pis(&prev_data.common);
     pw.set_proof_with_pis_target(&prev_proof_t, prev_proof);
+    pw.set_verifier_data_target(&prev_verifier_data, &prev_data.verifier_only);
 
     println!("Verifying previous proof in circuit...");
     let now = Instant::now();
-    builder.verify_proof::<C>(&prev_proof_t, &vd_target, &prev_data.common);
+    builder.verify_proof::<C>(&prev_proof_t, &prev_verifier_data, &prev_data.common);
     println!(
-        "Previous proof circuit verification setup time: {:?}",
+        "Previous proof in-circuit verification time: {:?}",
         now.elapsed()
     );
 
     // Now verify the new batch of Merkle proofs
+    // First, add Merkle root and make sure it matches previous proof's root
+    let merkle_root = builder.add_virtual_hash();
+    builder.register_public_inputs(&merkle_root.elements);
+    pw.set_hash_target(merkle_root, tree.cap.0[0]);
+
     for (&index, proof) in indices.iter().zip(proofs.iter()) {
         let i_c = builder.constant(F::from_canonical_usize(index));
         let i_bits = builder.split_le(i_c, log_n);
 
-        let data = builder.add_virtual_targets(LEAF_SIZE);
-        for (i, &value) in tree.leaves[index].iter().enumerate() {
-            pw.set_target(data[i], value);
-        }
+        // Add leaf data
+        let leaf_data = builder.add_virtual_targets(LEAF_SIZE);
+        builder.register_public_inputs(&leaf_data);
+        leaf_data
+            .iter()
+            .zip(tree.leaves[index].iter())
+            .for_each(|(&target, &value)| pw.set_target(target, value));
 
-        let merkle_root = builder.add_virtual_hash();
-        builder.register_public_inputs(&merkle_root.elements);
-        pw.set_hash_target(merkle_root, tree.cap.0[0]);
-
-        let proof_t = plonky2::hash::merkle_proofs::MerkleProofTarget {
+        // Add proof siblings
+        let proof_t = MerkleProofTarget {
             siblings: builder.add_virtual_hashes(proof.siblings.len()),
         };
         for (i, sibling) in proof.siblings.iter().enumerate() {
@@ -145,7 +179,7 @@ fn build_recursive_circuit(
         }
 
         builder.verify_merkle_proof::<<C as GenericConfig<D>>::InnerHasher>(
-            data.to_vec(),
+            leaf_data.to_vec(),
             &i_bits,
             merkle_root,
             &proof_t,
@@ -153,12 +187,19 @@ fn build_recursive_circuit(
     }
 
     let num_gates = builder.num_gates();
-    let data = builder.build::<C>();
-    let proof = data.prove(pw)?;
-
     println!("Recursive circuit gates: {}", num_gates);
 
-    Ok((data, proof))
+    let data = builder.build::<C>();
+    let (proof_result, memory_used) = measure_memory_usage(|| data.prove(pw));
+    record_memory_usage(memory_used);
+    let snark_proof = proof_result?;
+    println!(
+        "Memory used for recursive proof generation: {}",
+        format_size(memory_used)
+    );
+
+
+    Ok((data, snark_proof))
 }
 
 fn main() -> Result<()> {
@@ -180,17 +221,18 @@ fn main() -> Result<()> {
     let (tree, _) = build_merkle_tree::<F, C>(TREE_SIZE, LEAF_SIZE, 0);
     println!("Merkle Root (cap = 0): {:?}", tree.cap);
 
-    // Generate random indices and proofs
-    let mut indices: Vec<usize> = (0..leaves_len).collect();
+    // Generate N unique random indices (N = num_proofs)
+    let mut indices: Vec<usize> = (0..TREE_SIZE).collect();
+    let mut rng = thread_rng();
     indices.shuffle(&mut rng);
-    let random_indices: Vec<usize> = indices.into_iter().take(100).collect();
+    let random_indices: Vec<usize> = indices.into_iter().take(num_proofs).collect();
 
-    println!("Generating proofs for 100 leaves...");
-    let now = Instant::now();
+    println!("Generating Merkle proofs for {} leaves...", num_proofs);
+    let start = Instant::now();
     let proofs: Vec<_> = random_indices.iter().map(|&i| tree.prove(i)).collect();
-    println!("Proof generation time: {:?}", now.elapsed());
+    println!("Merkle proof generation time: {:?}", start.elapsed());
 
-    let log_n = (leaves_len as f64).log2() as usize;
+    let log_n = (TREE_SIZE as f64).log2() as usize;
 
     // Process proofs in batches
     let mut current_data;
@@ -198,6 +240,10 @@ fn main() -> Result<()> {
 
     // Build base circuit with first batch
     let first_batch_size = random_indices.len().min(PROOFS_PER_BATCH);
+
+    // Track total proof time
+    let total_proof_start = Instant::now();
+
     (current_data, current_proof) = build_base_circuit(
         &tree,
         &random_indices[0..first_batch_size],
@@ -238,6 +284,10 @@ fn main() -> Result<()> {
         current_proof = new_proof;
     }
 
+    let total_proof_time = total_proof_start.elapsed();
+
+    println!("\nProof Generation Summary:");
+    println!("Recursive circuit total build time: {:?}", total_build_time);
     if num_batches > 0 {
         println!(
             "Average recursive circuit build time: {:?}",
@@ -245,11 +295,35 @@ fn main() -> Result<()> {
         );
     }
 
+    println!(
+        "Total proof time (base + recursive): {:?}",
+        total_proof_time
+    );
+    println!("Proof generation time: {:?}", total_proof_time);
+
+    println!(
+        "Final proof size: {}",
+        format_size(current_proof.to_bytes().len() as u64)
+    );
+    println!(
+        "Proof size: {}",
+        format_size(current_proof.to_bytes().len() as u64)
+    );
+
+    println!("Peak memory usage: {}", format_size(get_peak_memory()));
+    println!(
+        "Memory used for proof generation: {}",
+        format_size(get_peak_memory())
+    );
+
+
     // Verify final proof
-    println!("Verifying final proof...");
+    println!("\nVerifying final proof...");
     let now = Instant::now();
     current_data.verify(current_proof)?;
-    println!("Final verification time: {:?}", now.elapsed());
+    let verification_time = now.elapsed();
+    println!("Final verification time: {:?}", verification_time);
+    println!("Verification time: {:?}", verification_time);
 
     Ok(())
 }

@@ -16,6 +16,7 @@ use std::time::Instant;
 // Import utils from parent directory
 #[path = "../utils/mod.rs"]
 mod utils;
+mod merkle_tree_recursive_batch;
 use utils::data::build_merkle_tree;
 use utils::metrics::{format_size, measure_memory_usage};
 
