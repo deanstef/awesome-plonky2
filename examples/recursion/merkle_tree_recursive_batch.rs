@@ -1,7 +1,7 @@
 use anyhow::Result;
 use plonky2::field::types::Field;
-use plonky2::hash::merkle_tree::MerkleTree;
 use plonky2::hash::merkle_proofs::MerkleProofTarget;
+use plonky2::hash::merkle_tree::MerkleTree;
 use plonky2::iop::witness::{PartialWitness, WitnessWrite};
 use plonky2::plonk::circuit_builder::CircuitBuilder;
 use plonky2::plonk::circuit_data::{CircuitConfig, CircuitData};
@@ -56,7 +56,7 @@ fn build_base_circuit(
     indices: &[usize],
     proofs: &[plonky2::hash::merkle_proofs::MerkleProof<F, <C as GenericConfig<D>>::Hasher>],
     log_n: usize,
-) -> Result<(CircuitData<F, C, D>, ProofWithPublicInputs<F, C, D>,)> {
+) -> Result<(CircuitData<F, C, D>, ProofWithPublicInputs<F, C, D>)> {
     println!("Building base circuit for {} proofs...", indices.len());
 
     let config = get_circuit_config();
@@ -132,7 +132,6 @@ fn build_recursive_circuit(
     proofs: &[plonky2::hash::merkle_proofs::MerkleProof<F, <C as GenericConfig<D>>::Hasher>],
     log_n: usize,
 ) -> Result<(CircuitData<F, C, D>, ProofWithPublicInputs<F, C, D>)> {
-
     let config = get_circuit_config();
     let mut builder = CircuitBuilder::<F, D>::new(config);
     let mut pw = PartialWitness::new();
@@ -197,7 +196,6 @@ fn build_recursive_circuit(
         "Memory used for recursive proof generation: {}",
         format_size(memory_used)
     );
-
 
     Ok((data, snark_proof))
 }
@@ -315,7 +313,6 @@ fn main() -> Result<()> {
         "Memory used for proof generation: {}",
         format_size(get_peak_memory())
     );
-
 
     // Verify final proof
     println!("\nVerifying final proof...");
