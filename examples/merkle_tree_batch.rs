@@ -121,9 +121,6 @@ fn main() -> Result<()> {
                 &proof_t,
             );
         }
-        //let build_time = now.elapsed();
-        //batch_build_times.push(build_time);
-        //println!("Batch circuit build time: {:?}", build_time);
 
         let gates = builder.num_gates();
         println!("Batch circuit gates: {}", gates);
