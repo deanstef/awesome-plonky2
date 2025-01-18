@@ -148,8 +148,10 @@ class MerkleTreeBenchmark:
 def main():
     parser = argparse.ArgumentParser(description='Run Merkle tree benchmarks')
     parser.add_argument('--leaf-counts', type=int, nargs='+', help='Leaf counts to benchmark')
-    parser.add_argument('--example', type=str, choices=['merkle_tree', 'merkle_tree_average', 'merkle_tree_recursive_verify', 'merkle_tree_recursive_batch'], 
-                        default='merkle_tree', help='Which example to benchmark')
+    parser.add_argument('--example', type=str, 
+                       choices=['merkle_tree', 'merkle_tree_average', 'merkle_tree_recursive_verify', 
+                               'merkle_tree_recursive_batch', 'merkle_tree_recursive_pairwise'], 
+                       default='merkle_tree', help='Which example to benchmark')
     args = parser.parse_args()
 
     # Setup

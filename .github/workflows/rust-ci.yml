@@ -46,7 +46,7 @@ jobs:
             # Extract example name without path and extension
             example=$(basename "$file" .rs)
             echo "Running example: $example"
-            if [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ] || [ "$example" = "merkle_tree_batch" ] || [ "$example" = "merkle_tree_recursive_verify" ] || [ "$example" = "merkle_tree_recursive_batch" ]; then
+            if [ "$example" = "merkle_tree" ] || [ "$example" = "merkle_tree_average" ] || [ "$example" = "merkle_tree_batch" ] || [ "$example" = "merkle_tree_recursive_verify" ] || [ "$example" = "merkle_tree_recursive_batch" ] || [ "$example" = "merkle_tree_recursive_pairwise" ]; then
               cargo run --release --example "$example" -- 2
             else
               cargo run --release --example "$example" -- -vv
