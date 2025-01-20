@@ -150,7 +150,8 @@ def main():
     parser.add_argument('--leaf-counts', type=int, nargs='+', help='Leaf counts to benchmark')
     parser.add_argument('--example', type=str, 
                        choices=['merkle_tree', 'merkle_tree_average', 'merkle_tree_recursive_verify', 
-                               'merkle_tree_recursive_batch', 'merkle_tree_recursive_pairwise'], 
+                               'merkle_tree_recursive_batch', 'merkle_tree_recursive_pairwise', 
+                               'merkle_tree_recursive_batch_avg'], 
                        default='merkle_tree', help='Which example to benchmark')
     args = parser.parse_args()
 

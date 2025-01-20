@@ -1,5 +1,7 @@
+#![allow(clippy::too_many_arguments)]
+
 use anyhow::Result;
-use plonky2::field::types::{Field, PrimeField64, Sample};
+use plonky2::field::types::{Field, Sample};
 use plonky2::hash::merkle_proofs::MerkleProofTarget;
 use plonky2::hash::merkle_tree::MerkleTree;
 use plonky2::hash::poseidon::PoseidonHash;
@@ -11,8 +13,8 @@ use plonky2::plonk::proof::ProofWithPublicInputs;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use std::env;
-use std::sync::Mutex;
 use std::ops::Div;
+use std::sync::Mutex;
 use std::time::Instant;
 
 // Import utils from parent directory
@@ -92,14 +94,14 @@ fn build_base_circuit(
 
     // Add target for running sum
     let running_sum = builder.add_virtual_target();
-    builder.register_public_inputs(&[running_sum]);  // Index 4
+    builder.register_public_inputs(&[running_sum]); // Index 4
 
     // Calculate sum off-circuit
     let mut off_circuit_sum = F::ZERO;
     for &index in indices {
         off_circuit_sum += tree.leaves[index][0];
     }
-    pw.set_target(running_sum, off_circuit_sum);  // In base circuit, running sum = batch sum
+    pw.set_target(running_sum, off_circuit_sum); // In base circuit, running sum = batch sum
 
     // Calculate sum in-circuit for verification
     let mut batch_sum_target = builder.zero();
@@ -188,20 +190,20 @@ fn build_recursive_circuit(
     );
 
     // Get previous sum value from previous proof's public inputs
-    let prev_sum = prev_proof.public_inputs[4];  // Get actual value
+    let prev_sum = prev_proof.public_inputs[4]; // Get actual value
 
     // Register Merkle root as a public input
     let merkle_root = builder.add_virtual_hash();
-    builder.register_public_inputs(&merkle_root.elements);  // Indices 0-3
+    builder.register_public_inputs(&merkle_root.elements); // Indices 0-3
     pw.set_hash_target(merkle_root, tree.cap.0[0]);
 
     // Add target for global sum
     let global_sum = builder.add_virtual_target();
-    builder.register_public_input(global_sum);  // Index 4
+    builder.register_public_input(global_sum); // Index 4
 
     // Add target for running sum
     let running_sum = builder.add_virtual_target();
-    builder.register_public_input(running_sum);  // Index 5
+    builder.register_public_input(running_sum); // Index 5
 
     // Calculate sum off-circuit
     let mut off_circuit_sum = F::ZERO;
@@ -292,20 +294,20 @@ fn build_final_circuit(
     );
 
     // Get previous sum value from previous proof's public inputs
-    let prev_sum = prev_proof.public_inputs[4];  // Get actual value
+    let prev_sum = prev_proof.public_inputs[4]; // Get actual value
 
     // Register Merkle root as a public input
     let merkle_root = builder.add_virtual_hash();
-    builder.register_public_inputs(&merkle_root.elements);  // Indices 0-3
+    builder.register_public_inputs(&merkle_root.elements); // Indices 0-3
     pw.set_hash_target(merkle_root, tree.cap.0[0]);
 
     // Add target for global sum
     let global_sum = builder.add_virtual_target();
-    builder.register_public_input(global_sum);  // Index 4
+    builder.register_public_input(global_sum); // Index 4
 
     // Add target for running sum
     let running_sum = builder.add_virtual_target();
-    builder.register_public_input(running_sum);  // Index 5
+    builder.register_public_input(running_sum); // Index 5
 
     // Calculate sum off-circuit
     let mut off_circuit_sum = F::ZERO;
@@ -353,7 +355,7 @@ fn build_final_circuit(
 
     // Register average as public input
     let average_target = builder.add_virtual_target();
-    builder.register_public_input(average_target);  // Index latest
+    builder.register_public_input(average_target); // Index latest
     pw.set_target(average_target, average);
 
     // Verify average computation
@@ -374,15 +376,6 @@ fn build_final_circuit(
     );
 
     Ok((data, snark_proof))
-}
-
-/// Compute numerical average using integer arithmetic
-fn compute_numerical_average<F: PrimeField64>(indices: &[usize], leaves: &[Vec<F>]) -> u64 {
-    let numerical_sum: u64 = indices
-        .iter()
-        .map(|&i| leaves[i][0].to_canonical_u64())
-        .sum();
-    numerical_sum / (indices.len() as u64)
 }
 
 pub fn main() -> Result<()> {
@@ -426,18 +419,11 @@ pub fn main() -> Result<()> {
     println!("Merkle proof generation time: {:?}", start.elapsed());
 
     // Calculate average (only of first value in each leaf)
-    let sum: F = random_indices
-        .iter()
-        .map(|&i| tree.leaves[i][0])
-        .sum();
+    let sum: F = random_indices.iter().map(|&i| tree.leaves[i][0]).sum();
     let average = sum.div(F::from_canonical_usize(num_leaves));
 
-    // Calculate numerical average for comparison
-    let numerical_average = compute_numerical_average(&random_indices, &tree.leaves);
-
     // Print selected leaves and average
-    println!("Off-circuit field element average: {}", average.to_canonical_u64());
-    println!("Off-circuit numerical average: {}", numerical_average);
+    println!("Field element average: {}", average);
 
     let log_n = (TREE_SIZE as f64).log2() as usize;
 
@@ -458,61 +444,54 @@ pub fn main() -> Result<()> {
         log_n,
     )?;
 
-    // Build recursive circuits for remaining batches
+    // Process remaining proofs in batches
     let mut total_build_time = std::time::Duration::new(0, 0);
     let remaining_proofs = random_indices.len() - first_batch_size;
     let num_batches = remaining_proofs.div_ceil(PROOFS_PER_BATCH);
+    println!("\n=== Building Recursive Circuits ===");
+    println!("Processing {} batches...", num_batches);
 
-    for i in 0..num_batches - 1 {
+    for i in 0..num_batches {
         let start_idx = first_batch_size + i * PROOFS_PER_BATCH;
         let end_idx = (start_idx + PROOFS_PER_BATCH).min(random_indices.len());
+        if start_idx >= end_idx {
+            break;
+        }
+
+        let now = Instant::now();
+        let (new_data, new_proof) = if i == num_batches - 1 {
+            // Last batch: use final circuit to compute average
+            build_final_circuit(
+                &current_data,
+                &current_proof,
+                &tree,
+                &random_indices[start_idx..end_idx],
+                &proofs[start_idx..end_idx],
+                log_n,
+                num_leaves,
+                average,
+            )?
+        } else {
+            // Intermediate batch: use recursive circuit
+            build_recursive_circuit(
+                &current_data,
+                &current_proof,
+                &tree,
+                &random_indices[start_idx..end_idx],
+                &proofs[start_idx..end_idx],
+                log_n,
+            )?
+        };
+        let elapsed = now.elapsed();
+        total_build_time += elapsed;
 
         println!(
-            "Building recursive circuit for batch {}/{}...",
+            "Batch {}/{}: {} proofs, build time: {:?}",
             i + 1,
-            num_batches
+            num_batches,
+            end_idx - start_idx,
+            elapsed
         );
-        let now = Instant::now();
-
-        let (new_data, new_proof) = build_recursive_circuit(
-            &current_data,
-            &current_proof,
-            &tree,
-            &random_indices[start_idx..end_idx],
-            &proofs[start_idx..end_idx],
-            log_n,
-        )?;
-
-        let elapsed = now.elapsed();
-        total_build_time += elapsed;
-        println!("Recursive circuit {} build time: {:?}", i + 1, elapsed);
-
-        current_data = new_data;
-        current_proof = new_proof;
-    }
-
-    // Handle the last batch with final circuit
-    if num_batches > 0 {
-        let start_idx = first_batch_size + (num_batches - 1) * PROOFS_PER_BATCH;
-        let end_idx = random_indices.len();
-
-        println!("Building final circuit for last batch...");
-        let now = Instant::now();
-
-        let (new_data, new_proof) = build_final_circuit(
-            &current_data,
-            &current_proof,
-            &tree,
-            &random_indices[start_idx..end_idx],
-            &proofs[start_idx..end_idx],
-            log_n,
-            num_leaves,
-            average,
-        )?;
-
-        let elapsed = now.elapsed();
-        total_build_time += elapsed;
-        println!("Final circuit build time: {:?}", elapsed);
 
         current_data = new_data;
         current_proof = new_proof;
@@ -522,13 +501,9 @@ pub fn main() -> Result<()> {
 
     println!("\nProof Generation Summary:");
 
-    // Get and display the final average from circuit (field arithmetic)
-    let circuit_average = current_proof.public_inputs.last().unwrap();  // Average is the last public input
-    println!("Circuit average (field arithmetic): {}", circuit_average);
-
-    // Calculate and display numerical average (integer arithmetic)
-    let numerical_average = compute_numerical_average(&random_indices, &tree.leaves);
-    println!("Numerical average (integer arithmetic): {}", numerical_average);
+    // Get and display the final average from circuit
+    let circuit_average = current_proof.public_inputs.last().unwrap();
+    println!("Field element average: {}", circuit_average);
 
     println!("Recursive circuit total build time: {:?}", total_build_time);
     if num_batches > 0 {
