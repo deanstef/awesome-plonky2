@@ -28,3 +28,7 @@ path = "examples/recursion/merkle_tree_recursive_batch.rs"
 [[example]]
 name = "merkle_tree_recursive_pairwise"
 path = "examples/recursion/merkle_tree_recursive_pairwise.rs"
+
+[[example]]
+name = "merkle_tree_recursive_batch_avg"
+path = "examples/recursion/merkle_tree_recursive_batch_avg.rs"

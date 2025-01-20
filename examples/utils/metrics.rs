@@ -15,6 +15,7 @@ pub fn get_memory_usage() -> u64 {
 }
 
 /// Format a size in bytes to a human-readable string (B, KB, MB, GB)
+#[allow(dead_code)]
 pub fn format_size(size_in_bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = KB * 1024;
