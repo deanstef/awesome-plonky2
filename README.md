@@ -90,6 +90,16 @@ This approach balances memory usage and proving time by processing leaves in fix
 RUSTFLAGS=-Ctarget-cpu=native cargo run --release --example merkle_tree_recursive_batch -- <number-of-leaves>
 ```
 
+#### Ordered Batch Verification
+
+The example `merkle_tree_recursive_batch_ordered.rs` extends the batch verification approach by adding an ordering constraint on the proofs. It ensures that the first field element of each Merkle proof's first hash is strictly greater than the previous one. This creates a verifiable ordering of the proofs, which can be useful in applications requiring that the prover is opening different paths in the tree.
+
+The ordering is enforced both within each batch and across batches through the recursive proofs, maintaining the ordering invariant throughout the entire chain.
+
+```bash
+RUSTFLAGS=-Ctarget-cpu=native cargo run --release --example merkle_tree_recursive_batch_ordered -- <number-of-leaves>
+```
+
 ### 9. Recursive Merkle Tree Pairwise Verification
 
 > This example is inspired by the [zkTree paper](https://eprint.iacr.org/2023/208).
