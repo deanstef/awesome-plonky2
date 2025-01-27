@@ -93,7 +93,7 @@ fn sort_proofs_and_indices(
 fn build_base_circuit(
     tree: &MerkleTree<F, <C as GenericConfig<D>>::Hasher>,
     indices: &[usize],
-    proofs: &[plonky2::hash::merkle_proofs::MerkleProof<F, <C as GenericConfig<D>>::Hasher>],
+    proofs: &[MerkleProof<F, <C as GenericConfig<D>>::Hasher>],
     log_n: usize,
 ) -> Result<(CircuitData<F, C, D>, ProofWithPublicInputs<F, C, D>)> {
     println!("Building base circuit for {} proofs...", indices.len());

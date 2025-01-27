@@ -37,6 +37,11 @@ class MerkleTreeBenchmark:
             proof_size = re.search(r'Proof size: ([\d\.]+) (B|KB|MB|GB)', output)
             memory_used = re.search(r'Memory used for proof generation: ([\d\.]+) (B|KB|MB|GB)', output)
             
+            # Extract recursive circuit build time if example contains 'recursive'
+            rec_proof_time = None
+            if 'recursive' in self.example_name:
+                rec_proof_time = re.search(r'Average recursive circuit build time: ([\d\.]+(?:µs|ms|s))', output)
+            
             # Convert memory and proof size to MB
             def convert_to_mb(value: float, unit: str) -> float:
                 return {
@@ -77,7 +82,8 @@ class MerkleTreeBenchmark:
                 'verify_time': parse_time(verify_time),
                 'proof_size_mb': proof_size_mb,
                 'memory_mb': memory_mb,
-                'example': self.example_name
+                'example': self.example_name,
+                'rec_proof_time_avg': parse_time(rec_proof_time) if rec_proof_time else None
             }
         except subprocess.CalledProcessError as e:
             print(f"Error running benchmark: {e}")
@@ -151,7 +157,8 @@ def main():
     parser.add_argument('--example', type=str, 
                        choices=['merkle_tree', 'merkle_tree_average', 'merkle_tree_recursive_verify', 
                                'merkle_tree_recursive_batch', 'merkle_tree_recursive_pairwise', 
-                               'merkle_tree_recursive_batch_avg'], 
+                               'merkle_tree_recursive_batch_avg', 'merkle_tree_recursive_batch_ordered',
+                               'merkle_tree_recursive_batch_avg_ord'], 
                        default='merkle_tree', help='Which example to benchmark')
     args = parser.parse_args()
 
