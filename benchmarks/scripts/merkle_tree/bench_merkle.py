@@ -11,7 +11,7 @@ import seaborn as sns
 import sys
 import argparse
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.plotting import plot_timing_comparison, plot_memory_usage, save_plot
+from utils.plotting import plot_timing_comparison, plot_memory_usage, plot_recursive_times, save_plot
 
 class MerkleTreeBenchmark:
     def __init__(self, repo_root: str, example_name: str = 'merkle_tree'):
@@ -125,31 +125,64 @@ class MerkleTreeBenchmark:
         csv_path = os.path.join(self.results_dir, f'benchmark_{timestamp}.csv')
         df.to_csv(csv_path, index=False)
         
-        # Create timing plot
+        self.create_plots(df, timestamp)
+        
+        print(f"\nResults saved to:")
+        print(f"- Data: {csv_path}")
+        print(f"- Timing Plot: {os.path.join(self.results_dir, f'timing_{timestamp}.pdf')}")
+        print(f"- Memory Plot: {os.path.join(self.results_dir, f'memory_{timestamp}.pdf')}")
+    
+    def create_plots(self, df: pd.DataFrame, timestamp: str = None):
+        """Create plots from a DataFrame."""
+        if timestamp is None:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            
+        # Create timing plot (proof and verify times only)
         fig = plot_timing_comparison(
             df,
             x_col='leaf_count',
             y_cols=['proof_time', 'verify_time'],
             title='Merkle Tree Proof Generation and Verification Time'
         )
-        timing_plot_path = os.path.join(self.results_dir, f'timing_{timestamp}.png')
+        timing_plot_path = os.path.join(self.results_dir, f'timing_{timestamp}.pdf')
         save_plot(fig, timing_plot_path)
         plt.close()
 
-        # Create memory plot
-        fig = plot_memory_usage(
-            df,
-            x_col='leaf_count',
-            memory_col='memory_mb'
-        )
-        memory_plot_path = os.path.join(self.results_dir, f'memory_{timestamp}.png')
-        save_plot(fig, memory_plot_path)
-        plt.close()
+        # Create recursive proof time plot if data exists
+        # if 'rec_proof_time_avg' in df.columns and not df['rec_proof_time_avg'].isna().all():
+        #     fig = plot_recursive_times(
+        #         df,
+        #         x_col='leaf_count',
+        #         y_col='rec_proof_time_avg',
+        #         log_scale=True
+        #     )
+        #     recursive_plot_path = os.path.join(self.results_dir, f'recursive_timing_{timestamp}.png')
+        #     save_plot(fig, recursive_plot_path)
+        #     plt.close()
+
+        # Create memory plot if memory data exists
+        if 'memory_mb' in df.columns and not df['memory_mb'].isna().all():
+            fig = plot_memory_usage(
+                df,
+                x_col='leaf_count',
+                memory_col='memory_mb'
+            )
+            memory_plot_path = os.path.join(self.results_dir, f'memory_{timestamp}.pdf')
+            save_plot(fig, memory_plot_path)
+            plt.close()
+    
+    
+    @classmethod
+    def from_csv(cls, csv_path: str, example_name: str = None):
+        """Create plots from an existing CSV file."""
+        df = pd.read_csv(csv_path)
+        if example_name is None:
+            example_name = df['example'].iloc[0] if 'example' in df.columns else 'merkle_tree'
         
-        print(f"\nResults saved to:")
-        print(f"- Data: {csv_path}")
-        print(f"- Timing Plot: {timing_plot_path}")
-        print(f"- Memory Plot: {memory_plot_path}")
+        repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        benchmark = cls(repo_root, example_name)
+        benchmark.create_plots(df)
+        return benchmark
 
 def main():
     parser = argparse.ArgumentParser(description='Run Merkle tree benchmarks')
@@ -159,17 +192,22 @@ def main():
                                'merkle_tree_recursive_batch', 'merkle_tree_recursive_pairwise', 
                                'merkle_tree_recursive_batch_avg', 'merkle_tree_recursive_batch_ordered',
                                'merkle_tree_recursive_batch_avg_ord'], 
-                       default='merkle_tree', help='Which example to benchmark')
+                       help='Which example to benchmark (default: merkle_tree, or read from CSV if using --csv)')
+    parser.add_argument('--csv', type=str, help='Path to existing CSV file to plot')
     args = parser.parse_args()
 
     # Setup
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    benchmark = MerkleTreeBenchmark(repo_root, args.example)
     
-    # Run benchmarks
-    results_df = benchmark.run_all_benchmarks(args.leaf_counts, args.example)
-    
-    # Save results
+    if args.csv:
+        # Load and plot from existing CSV, only use args.example if explicitly provided
+        MerkleTreeBenchmark.from_csv(args.csv, args.example if args.example else None)
+        return
+        
+    # For running new benchmarks, default to 'merkle_tree' if no example specified
+    example = args.example if args.example else 'merkle_tree'
+    benchmark = MerkleTreeBenchmark(repo_root, example)
+    results_df = benchmark.run_all_benchmarks(args.leaf_counts, example)
     benchmark.save_results(results_df)
 
 if __name__ == '__main__':

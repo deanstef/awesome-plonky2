@@ -113,6 +113,42 @@ def plot_memory_usage(df: pd.DataFrame, x_col: str, memory_col: str,
     
     return fig
 
+def plot_recursive_times(df: pd.DataFrame, x_col: str, y_col: str,
+                        title: str = None, log_scale: bool = False):
+    """Create a bar plot of recursive proof times.
+    
+    Args:
+        df: DataFrame containing the data
+        x_col: Column name for x-axis (typically number of leaves)
+        y_col: Column name for recursive proof time
+        title: Plot title (deprecated, use LaTeX captions instead)
+        log_scale: Whether to use log scale for y-axis
+    """
+    setup_plot_style()
+    
+    fig, ax = plt.subplots()
+    
+    # Create bar plot
+    sns.barplot(data=df, x=x_col, y=y_col, color='#2AB7CA')
+    
+    if log_scale:
+        ax.set_yscale('log')
+    
+    # Customize grid
+    ax.grid(True, which='major', linestyle='-', alpha=0.2, axis='y')
+    
+    # Add labels with LaTeX formatting
+    plt.xlabel('Number of Leaves ($n$)')
+    plt.ylabel('Average Recursive Proof Time (seconds)')
+    
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=45)
+    
+    # Adjust layout to prevent label clipping
+    plt.tight_layout()
+    
+    return fig
+
 def save_plot(fig, filepath: str):
     """Save the plot to a file.
     
