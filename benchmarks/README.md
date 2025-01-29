@@ -29,9 +29,23 @@ cd benchmarks
 pipenv install
 ```
 
+## Dependencies
+
+### LaTeX
+The benchmarking scripts generate plots using matplotlib with LaTeX rendering for high-quality output. You need to have LaTeX installed on your system:
+
+- **Ubuntu/Debian**:
+  ```bash
+  sudo apt-get install texlive-latex-base texlive-fonts-recommended texlive-fonts-extra texlive-latex-extra
+  ```
+- **macOS**:
+  ```bash
+  brew install --cask mactex-no-gui
+  ```
+- **Other Linux distributions**: Use your package manager to install TeX Live
+
 ## Running Benchmarks
 
 ```bash
 # Run Merkle tree benchmarks
 pipenv run python scripts/merkle_tree/bench_merkle.py --leaf-counts <array of leaf counts e.g. 10 100 1000> [--example merkle_tree_average] (default: merkle_tree)
-```
