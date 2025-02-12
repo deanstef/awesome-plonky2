@@ -78,14 +78,14 @@ def plot_timing_comparison(df: pd.DataFrame, x_col: str, y_cols: list,
     
     return fig
 
-def plot_memory_usage(df: pd.DataFrame, x_col: str, memory_col: str,
+def plot_memory_usage(df: pd.DataFrame, x_col: str, memory_cols: list,
                      title: str = None, log_scale: bool = True):
-    """Create a plot of memory usage.
+    """Create a plot of memory usage for prover and verifier.
     
     Args:
         df: DataFrame containing the data
         x_col: Column name for x-axis (typically number of leaves)
-        memory_col: Column name for memory usage
+        memory_cols: List of column names for memory measurements
         title: Plot title (deprecated, use LaTeX captions instead)
         log_scale: Whether to use log scale for both axes
     """
@@ -93,7 +93,20 @@ def plot_memory_usage(df: pd.DataFrame, x_col: str, memory_col: str,
     
     fig, ax = plt.subplots()
     
-    sns.lineplot(data=df, x=x_col, y=memory_col, marker='o', color='#2AB7CA')
+    # Define different markers and line styles for better distinction
+    markers = ['o', 's', 'D', '^', 'v']
+    line_styles = ['-', '--', '-.', ':']
+    
+    for idx, col in enumerate(memory_cols):
+        # Convert column name to a more readable format for the legend
+        label = col.replace('_memory_mb', '').title()
+        
+        # Plot with unique marker and line style
+        marker = markers[idx % len(markers)]
+        line_style = line_styles[idx % len(line_styles)]
+        
+        sns.lineplot(data=df, x=x_col, y=col, marker=marker,
+                     linestyle=line_style, label=label, ax=ax)
     
     if log_scale:
         ax.set_xscale('log')

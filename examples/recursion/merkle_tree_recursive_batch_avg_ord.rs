@@ -165,8 +165,8 @@ fn build_base_circuit(
         let i_c = builder.constant(F::from_canonical_usize(*index));
         let i_bits = builder.split_le(i_c, log_n);
 
+        // Add leaf data as private inputs instead of public
         let leaf_data = builder.add_virtual_targets(tree.leaves[*index].len());
-        builder.register_public_inputs(&leaf_data);
         leaf_data
             .iter()
             .zip(tree.leaves[*index].iter())
@@ -312,8 +312,8 @@ fn build_recursive_circuit(
         let i_c = builder.constant(F::from_canonical_usize(*index));
         let i_bits = builder.split_le(i_c, log_n);
 
+        // Add leaf data as private inputs instead of public
         let leaf_data = builder.add_virtual_targets(tree.leaves[*index].len());
-        builder.register_public_inputs(&leaf_data);
         leaf_data
             .iter()
             .zip(tree.leaves[*index].iter())
@@ -328,6 +328,8 @@ fn build_recursive_circuit(
         }
 
         // Add ordering constraint on the first element of the first hash
+        // WARN: This might be a bug because we
+        // always read the first proof, but I don't have the time to investigate right now.
         let current_first_element = proof.siblings[0].elements[0];
         let current_element_target = builder.constant(current_first_element);
 
@@ -452,8 +454,8 @@ fn build_final_circuit(
         let i_c = builder.constant(F::from_canonical_usize(*index));
         let i_bits = builder.split_le(i_c, log_n);
 
+        // Add leaf data as private inputs instead of public
         let leaf_data = builder.add_virtual_targets(tree.leaves[*index].len());
-        builder.register_public_inputs(&leaf_data);
         leaf_data
             .iter()
             .zip(tree.leaves[*index].iter())
@@ -697,10 +699,14 @@ pub fn main() -> Result<()> {
     // Verify final proof
     println!("\nVerifying final proof...");
     let now = Instant::now();
-    current_data.verify(current_proof)?;
+    let (_, verification_memory) = measure_memory_usage(|| current_data.verify(current_proof));
     let verification_time = now.elapsed();
     println!("Final verification time: {:?}", verification_time);
     println!("Verification time: {:?}", verification_time);
+    println!(
+        "Memory used for proof verification: {}",
+        format_size(verification_memory)
+    );
 
     Ok(())
 }

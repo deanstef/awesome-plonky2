@@ -35,7 +35,8 @@ class MerkleTreeBenchmark:
             proof_time = re.search(r'Proof generation time: ([\d\.]+(?:µs|ms|s))', output)
             verify_time = re.search(r'Verification time: ([\d\.]+(?:µs|ms|s))', output)
             proof_size = re.search(r'Proof size: ([\d\.]+) (B|KB|MB|GB)', output)
-            memory_used = re.search(r'Memory used for proof generation: ([\d\.]+) (B|KB|MB|GB)', output)
+            prover_memory = re.search(r'Memory used for proof generation: ([\d\.]+) (B|KB|MB|GB)', output)
+            verifier_memory = re.search(r'Memory used for proof verification: ([\d\.]+) (B|KB|MB|GB)', output)
             
             # Extract recursive circuit build time if example contains 'recursive'
             rec_proof_time = None
@@ -51,11 +52,17 @@ class MerkleTreeBenchmark:
                     'GB': value * 1024
                 }[unit]
 
-            memory_mb = None
-            if memory_used:
-                value = float(memory_used.group(1))
-                unit = memory_used.group(2)
-                memory_mb = convert_to_mb(value, unit)
+            prover_memory_mb = None
+            if prover_memory:
+                value = float(prover_memory.group(1))
+                unit = prover_memory.group(2)
+                prover_memory_mb = convert_to_mb(value, unit)
+                
+            verifier_memory_mb = None
+            if verifier_memory:
+                value = float(verifier_memory.group(1))
+                unit = verifier_memory.group(2)
+                verifier_memory_mb = convert_to_mb(value, unit)
 
             proof_size_mb = None
             if proof_size:
@@ -81,7 +88,8 @@ class MerkleTreeBenchmark:
                 'proof_time': parse_time(proof_time),
                 'verify_time': parse_time(verify_time),
                 'proof_size_mb': proof_size_mb,
-                'memory_mb': memory_mb,
+                'prover_memory_mb': prover_memory_mb,
+                'verifier_memory_mb': verifier_memory_mb,
                 'example': self.example_name,
                 'rec_proof_time_avg': parse_time(rec_proof_time) if rec_proof_time else None
             }
@@ -161,11 +169,13 @@ class MerkleTreeBenchmark:
         #     plt.close()
 
         # Create memory plot if memory data exists
-        if 'memory_mb' in df.columns and not df['memory_mb'].isna().all():
+        # Create memory plot if memory data exists
+        memory_cols = ['prover_memory_mb', 'verifier_memory_mb']
+        if any(col in df.columns and not df[col].isna().all() for col in memory_cols):
             fig = plot_memory_usage(
                 df,
                 x_col='leaf_count',
-                memory_col='memory_mb'
+                memory_cols=[col for col in memory_cols if col in df.columns]
             )
             memory_plot_path = os.path.join(self.results_dir, f'memory_{timestamp}.pdf')
             save_plot(fig, memory_plot_path)
