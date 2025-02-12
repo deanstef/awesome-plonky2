@@ -35,7 +35,8 @@ class MerkleTreeBenchmark:
             proof_time = re.search(r'Proof generation time: ([\d\.]+(?:µs|ms|s))', output)
             verify_time = re.search(r'Verification time: ([\d\.]+(?:µs|ms|s))', output)
             proof_size = re.search(r'Proof size: ([\d\.]+) (B|KB|MB|GB)', output)
-            memory_used = re.search(r'Memory used for proof generation: ([\d\.]+) (B|KB|MB|GB)', output)
+            prover_memory = re.search(r'Memory used for proof generation: ([\d\.]+) (B|KB|MB|GB)', output)
+            verifier_memory = re.search(r'Memory used for proof verification: ([\d\.]+) (B|KB|MB|GB)', output)
             
             # Extract recursive circuit build time if example contains 'recursive'
             rec_proof_time = None
@@ -51,11 +52,17 @@ class MerkleTreeBenchmark:
                     'GB': value * 1024
                 }[unit]
 
-            memory_mb = None
-            if memory_used:
-                value = float(memory_used.group(1))
-                unit = memory_used.group(2)
-                memory_mb = convert_to_mb(value, unit)
+            prover_memory_mb = None
+            if prover_memory:
+                value = float(prover_memory.group(1))
+                unit = prover_memory.group(2)
+                prover_memory_mb = convert_to_mb(value, unit)
+                
+            verifier_memory_mb = None
+            if verifier_memory:
+                value = float(verifier_memory.group(1))
+                unit = verifier_memory.group(2)
+                verifier_memory_mb = convert_to_mb(value, unit)
 
             proof_size_mb = None
             if proof_size:
@@ -81,7 +88,8 @@ class MerkleTreeBenchmark:
                 'proof_time': parse_time(proof_time),
                 'verify_time': parse_time(verify_time),
                 'proof_size_mb': proof_size_mb,
-                'memory_mb': memory_mb,
+                'prover_memory_mb': prover_memory_mb,
+                'verifier_memory_mb': verifier_memory_mb,
                 'example': self.example_name,
                 'rec_proof_time_avg': parse_time(rec_proof_time) if rec_proof_time else None
             }
@@ -118,19 +126,24 @@ class MerkleTreeBenchmark:
         
         return pd.DataFrame(results)
     
-    def save_results(self, df: pd.DataFrame):
+    def save_results(self, df: pd.DataFrame, skip_plots: bool = False):
         """Save benchmark results and plots."""
         # Save raw data
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         csv_path = os.path.join(self.results_dir, f'benchmark_{timestamp}.csv')
         df.to_csv(csv_path, index=False)
         
-        self.create_plots(df, timestamp)
-        
         print(f"\nResults saved to:")
         print(f"- Data: {csv_path}")
-        print(f"- Timing Plot: {os.path.join(self.results_dir, f'timing_{timestamp}.pdf')}")
-        print(f"- Memory Plot: {os.path.join(self.results_dir, f'memory_{timestamp}.pdf')}")
+        
+        if not skip_plots:
+            try:
+                self.create_plots(df, timestamp)
+                print(f"- Timing Plot: {os.path.join(self.results_dir, f'timing_{timestamp}.pdf')}")
+                print(f"- Memory Plot: {os.path.join(self.results_dir, f'memory_{timestamp}.pdf')}")
+            except Exception as e:
+                print("\nWarning: Could not generate plots. This might be due to missing LaTeX installation.")
+                print(f"Error details: {str(e)}")
     
     def create_plots(self, df: pd.DataFrame, timestamp: str = None):
         """Create plots from a DataFrame."""
@@ -161,11 +174,13 @@ class MerkleTreeBenchmark:
         #     plt.close()
 
         # Create memory plot if memory data exists
-        if 'memory_mb' in df.columns and not df['memory_mb'].isna().all():
+        # Create memory plot if memory data exists
+        memory_cols = ['prover_memory_mb', 'verifier_memory_mb']
+        if any(col in df.columns and not df[col].isna().all() for col in memory_cols):
             fig = plot_memory_usage(
                 df,
                 x_col='leaf_count',
-                memory_col='memory_mb'
+                memory_cols=[col for col in memory_cols if col in df.columns]
             )
             memory_plot_path = os.path.join(self.results_dir, f'memory_{timestamp}.pdf')
             save_plot(fig, memory_plot_path)
@@ -194,12 +209,15 @@ def main():
                                'merkle_tree_recursive_batch_avg_ord'], 
                        help='Which example to benchmark (default: merkle_tree, or read from CSV if using --csv)')
     parser.add_argument('--csv', type=str, help='Path to existing CSV file to plot')
+    parser.add_argument('--no-plots', action='store_true', help='Skip plot generation, only save CSV data')
     args = parser.parse_args()
 
     # Setup
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     
     if args.csv:
+        if args.no_plots:
+            print("Warning: --no-plots has no effect when using --csv")
         # Load and plot from existing CSV, only use args.example if explicitly provided
         MerkleTreeBenchmark.from_csv(args.csv, args.example if args.example else None)
         return
@@ -208,7 +226,7 @@ def main():
     example = args.example if args.example else 'merkle_tree'
     benchmark = MerkleTreeBenchmark(repo_root, example)
     results_df = benchmark.run_all_benchmarks(args.leaf_counts, example)
-    benchmark.save_results(results_df)
+    benchmark.save_results(results_df, skip_plots=args.no_plots)
 
 if __name__ == '__main__':
     main()
