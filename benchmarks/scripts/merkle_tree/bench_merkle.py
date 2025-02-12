@@ -126,19 +126,24 @@ class MerkleTreeBenchmark:
         
         return pd.DataFrame(results)
     
-    def save_results(self, df: pd.DataFrame):
+    def save_results(self, df: pd.DataFrame, skip_plots: bool = False):
         """Save benchmark results and plots."""
         # Save raw data
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         csv_path = os.path.join(self.results_dir, f'benchmark_{timestamp}.csv')
         df.to_csv(csv_path, index=False)
         
-        self.create_plots(df, timestamp)
-        
         print(f"\nResults saved to:")
         print(f"- Data: {csv_path}")
-        print(f"- Timing Plot: {os.path.join(self.results_dir, f'timing_{timestamp}.pdf')}")
-        print(f"- Memory Plot: {os.path.join(self.results_dir, f'memory_{timestamp}.pdf')}")
+        
+        if not skip_plots:
+            try:
+                self.create_plots(df, timestamp)
+                print(f"- Timing Plot: {os.path.join(self.results_dir, f'timing_{timestamp}.pdf')}")
+                print(f"- Memory Plot: {os.path.join(self.results_dir, f'memory_{timestamp}.pdf')}")
+            except Exception as e:
+                print("\nWarning: Could not generate plots. This might be due to missing LaTeX installation.")
+                print(f"Error details: {str(e)}")
     
     def create_plots(self, df: pd.DataFrame, timestamp: str = None):
         """Create plots from a DataFrame."""
@@ -204,12 +209,15 @@ def main():
                                'merkle_tree_recursive_batch_avg_ord'], 
                        help='Which example to benchmark (default: merkle_tree, or read from CSV if using --csv)')
     parser.add_argument('--csv', type=str, help='Path to existing CSV file to plot')
+    parser.add_argument('--no-plots', action='store_true', help='Skip plot generation, only save CSV data')
     args = parser.parse_args()
 
     # Setup
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
     
     if args.csv:
+        if args.no_plots:
+            print("Warning: --no-plots has no effect when using --csv")
         # Load and plot from existing CSV, only use args.example if explicitly provided
         MerkleTreeBenchmark.from_csv(args.csv, args.example if args.example else None)
         return
@@ -218,7 +226,7 @@ def main():
     example = args.example if args.example else 'merkle_tree'
     benchmark = MerkleTreeBenchmark(repo_root, example)
     results_df = benchmark.run_all_benchmarks(args.leaf_counts, example)
-    benchmark.save_results(results_df)
+    benchmark.save_results(results_df, skip_plots=args.no_plots)
 
 if __name__ == '__main__':
     main()
