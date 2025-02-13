@@ -69,9 +69,9 @@ def plot_timing_comparison(df: pd.DataFrame, x_col: str, y_cols: list,
     plt.xlabel('Number of Leaves ($n$)')
     plt.ylabel('Time (seconds)')
     
-    # Customize legend
+    # Add legend inside plot in top left
     plt.legend(frameon=True, fancybox=False, edgecolor='black', 
-              bbox_to_anchor=(1.02, 1), loc='upper left')
+              loc='upper left', bbox_to_anchor=(0.02, 0.98))
     
     # Adjust layout to prevent label clipping
     plt.tight_layout()
@@ -121,6 +121,10 @@ def plot_memory_usage(df: pd.DataFrame, x_col: str, memory_cols: list,
     plt.xlabel('Number of Leaves ($n$)')
     plt.ylabel('Memory Usage (MB)')
     
+    # Add legend inside plot in top left
+    plt.legend(frameon=True, fancybox=False, edgecolor='black', 
+              loc='upper left', bbox_to_anchor=(0.02, 0.98))
+    
     # Adjust layout to prevent label clipping
     plt.tight_layout()
     
@@ -142,7 +146,11 @@ def plot_recursive_times(df: pd.DataFrame, x_col: str, y_col: str,
     fig, ax = plt.subplots()
     
     # Create bar plot
-    sns.barplot(data=df, x=x_col, y=y_col, color='#2AB7CA')
+    sns.barplot(data=df, x=x_col, y=y_col, color='#2AB7CA', label='Recursive Proof Time')
+    
+    # Add legend inside plot in top left
+    plt.legend(frameon=True, fancybox=False, edgecolor='black', 
+              loc='upper left', bbox_to_anchor=(0.02, 0.98))
     
     if log_scale:
         ax.set_yscale('log')
